@@ -4,146 +4,610 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Maker GPS: Interactive Lean Canvas</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --paper:    #f5f0e8;
+            --paper-dk: #ede6d6;
+            --ink:      #1a1a1a;
+            --ink-mid:  #3a3530;
+            --ink-lt:   #6b6358;
+            --amber:    #e8830a;
+            --amber-lt: #f5a623;
+            --red:      #c0392b;
+            --green:    #1e6b3a;
+            --blue:     #1a3a6b;
+            --rule:     rgba(26,26,26,0.15);
+            --rule-dk:  rgba(26,26,26,0.35);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #2a2520;
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(255,255,255,0.03) 31px, rgba(255,255,255,0.03) 32px),
+                repeating-linear-gradient(90deg, transparent, transparent 31px, rgba(255,255,255,0.03) 31px, rgba(255,255,255,0.03) 32px);
+            font-family: 'Barlow Condensed', sans-serif;
+            padding: 2rem 1rem 4rem;
+            min-height: 100vh;
+        }
+
+        /* ─── WRAPPER ─── */
+        #canvas-content {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: var(--paper);
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        /* Blueprint grid overlay on paper */
+        #canvas-content::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 23px, rgba(26,80,140,0.06) 23px, rgba(26,80,140,0.06) 24px),
+                repeating-linear-gradient(90deg, transparent, transparent 23px, rgba(26,80,140,0.06) 23px, rgba(26,80,140,0.06) 24px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Tape strips at top corners */
+        #canvas-content::after {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-1deg);
+            width: 120px;
+            height: 28px;
+            background: rgba(232,131,10,0.5);
+            background-image: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 8px,
+                rgba(0,0,0,0.05) 8px,
+                rgba(0,0,0,0.05) 9px
+            );
+            z-index: 10;
+        }
+
+        /* ─── HEADER ─── */
+        header {
+            position: relative;
+            z-index: 1;
+            padding: 1.5rem 2rem 1rem;
+            border-bottom: 3px solid var(--ink);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .header-left {}
+
+        .header-eyebrow {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 3px;
+            color: var(--amber);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(28px, 5vw, 52px);
+            color: var(--ink);
+            letter-spacing: 2px;
+            line-height: 0.95;
+        }
+
+        .header-sub {
+            font-size: 13px;
+            font-style: italic;
+            color: var(--ink-lt);
+            margin-top: 6px;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
+
+        /* ─── PDF BUTTON ─── */
+        #download-btn {
+            flex-shrink: 0;
+            background: var(--ink);
+            color: var(--paper);
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 16px;
+            letter-spacing: 2px;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.15s;
+            position: relative;
+        }
+        #download-btn::before {
+            content: '';
+            position: absolute;
+            bottom: -3px; right: -3px;
+            width: 100%; height: 100%;
+            border: 2px solid var(--amber);
+            z-index: -1;
+        }
+        #download-btn:hover { background: var(--amber); color: var(--ink); }
+        #download-btn svg { width: 16px; height: 16px; }
+
+        /* ─── TIP BOX ─── */
+        #guide-box {
+            position: relative;
+            z-index: 1;
+            margin: 0 2rem 0;
+            padding: 10px 14px;
+            background: rgba(26,58,107,0.07);
+            border-left: 3px solid var(--blue);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--blue);
+        }
+        #guide-box .tip-icon {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 2px;
+            background: var(--blue);
+            color: white;
+            padding: 2px 6px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        #guide-box strong { font-weight: 700; }
+
+        /* ─── SECTION LABEL ─── */
+        .section-num {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: var(--ink-lt);
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        /* ─── CANVAS GRID ─── */
+        .canvas-wrap {
+            position: relative;
+            z-index: 1;
+            padding: 1.25rem 2rem 0;
+        }
+
+        .canvas-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            border: 2px solid var(--ink);
+            background: var(--ink);
+            gap: 1px;
+        }
+
+        .canvas-cell {
+            background: var(--paper);
+            padding: 14px;
+            position: relative;
+        }
+
+        .canvas-cell.split {
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .canvas-cell.split .split-top,
+        .canvas-cell.split .split-bot {
+            padding: 14px;
+            flex: 1;
+        }
+        .canvas-cell.split .split-top {
+            border-bottom: 1px solid var(--rule-dk);
+        }
+
+        /* ─── CELL HEADERS ─── */
+        .cell-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 18px;
+            letter-spacing: 1.5px;
+            color: var(--ink);
+            margin-bottom: 2px;
+            line-height: 1;
+        }
+        .cell-hint {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 8px;
+            letter-spacing: 1.5px;
+            color: var(--ink-lt);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        /* ─── TEXTAREAS ─── */
+        textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed var(--rule);
+            resize: none;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 13px;
+            color: var(--ink-mid);
+            outline: none;
+            padding: 4px 2px;
+            line-height: 1.5;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        textarea:focus {
+            border-bottom-color: var(--amber);
+            background: rgba(232,131,10,0.04);
+        }
+        textarea::placeholder {
+            color: var(--ink-lt);
+            opacity: 0.55;
+            font-style: italic;
+        }
+
+        .ta-main  { height: 110px; }
+        .ta-sub   { height: 72px; }
+        .ta-half  { height: 80px; }
+
+        .sub-section {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--rule);
+        }
+        .sub-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 8px;
+            letter-spacing: 2px;
+            color: var(--ink-lt);
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        /* Colored accent titles */
+        .title-red  { color: var(--red); }
+        .title-green { color: var(--green); }
+
+        /* ─── COST/REVENUE ROW ─── */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border: 2px solid var(--ink);
+            border-top: 1px solid var(--ink);
+            background: var(--ink);
+            gap: 1px;
+            margin-bottom: 0;
+        }
+        .bottom-cell {
+            background: var(--paper);
+            padding: 14px;
+        }
+
+        /* ─── VIABILITY CALCULATOR ─── */
+        .calc-section {
+            position: relative;
+            z-index: 1;
+            margin: 0 2rem 2rem;
+            background: var(--ink);
+            padding: 1.5rem 2rem;
+            border-top: 4px solid var(--amber);
+        }
+
+        .calc-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 26px;
+            letter-spacing: 3px;
+            color: var(--paper);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .calc-title span {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--amber);
+            border: 1px solid var(--amber);
+            padding: 3px 8px;
+            align-self: center;
+        }
+
+        .calc-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .calc-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: #8a8070;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .calc-input {
+            width: 100%;
+            background: #2a2520;
+            border: 1px solid #3a3530;
+            border-bottom: 2px solid var(--amber);
+            color: var(--paper);
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 28px;
+            letter-spacing: 2px;
+            padding: 8px 10px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .calc-input:focus { border-color: var(--amber-lt); }
+        .calc-input::placeholder { color: #3a3530; }
+
+        .calc-operator {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 48px;
+            color: var(--amber);
+            text-align: center;
+            line-height: 1;
+        }
+
+        .calc-result {
+            background: #0f0d0a;
+            border: 1px solid #3a3530;
+            border-left: 3px solid var(--amber);
+            padding: 12px 14px;
+        }
+        #resultPrice {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 42px;
+            color: var(--amber-lt);
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+
+        /* ─── FOOTER NOTE ─── */
+        .footer-note {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 1rem 2rem 1.5rem;
+            border-top: 1px dashed var(--rule-dk);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            color: var(--ink-lt);
+            letter-spacing: 0.5px;
+            line-height: 1.6;
+        }
+
+        /* ─── CORNER MARKS (blueprint feel) ─── */
+        .corner-mark {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            z-index: 2;
+        }
+        .corner-mark.tl { top: 6px; left: 6px; border-top: 2px solid var(--amber); border-left: 2px solid var(--amber); }
+        .corner-mark.tr { top: 6px; right: 6px; border-top: 2px solid var(--amber); border-right: 2px solid var(--amber); }
+        .corner-mark.bl { bottom: 6px; left: 6px; border-bottom: 2px solid var(--amber); border-left: 2px solid var(--amber); }
+        .corner-mark.br { bottom: 6px; right: 6px; border-bottom: 2px solid var(--amber); border-right: 2px solid var(--amber); }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 768px) {
+            body { padding: 1rem 0.5rem 3rem; }
+            header { flex-direction: column; padding: 1rem; }
+            .canvas-wrap { padding: 1rem; }
+            .canvas-grid { grid-template-columns: 1fr; }
+            .bottom-grid { grid-template-columns: 1fr; }
+            .calc-grid { grid-template-columns: 1fr; }
+            .calc-operator { font-size: 28px; }
+            #guide-box { margin: 0 1rem; }
+            .calc-section { margin: 0 1rem 1.5rem; }
+            .footer-note { padding: 1rem; }
+        }
+
+        @media print {
+            body { background: white; padding: 0; }
+            #canvas-content { box-shadow: none; }
+            #download-btn, #guide-box { display: none !important; }
+        }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans text-gray-900 p-4 md:p-8">
+<body>
 
-    <div id="canvas-content" class="max-w-6xl mx-auto bg-white p-8 shadow-sm border border-gray-200">
-        <header class="flex justify-between items-start mb-8 border-b-4 border-black pb-4">
-            <div>
-                <h1 class="text-4xl font-black uppercase tracking-tighter text-black">The One-Page Business Plan for Makers</h1>
-                <p class="text-lg font-medium text-gray-600 italic">Innovation Week · Centre for Research and Innovation</p>
+<div id="canvas-content">
+
+    <!-- Corner registration marks -->
+    <div class="corner-mark tl"></div>
+    <div class="corner-mark tr"></div>
+    <div class="corner-mark bl"></div>
+    <div class="corner-mark br"></div>
+
+    <!-- HEADER -->
+    <header>
+        <div class="header-left">
+            <div class="header-eyebrow">// Innovation Week · Centre for Research and Innovation</div>
+            <h1>The One-Page<br>Business Plan<br>for Makers</h1>
+            <div class="header-sub">Lean Canvas — Fill it in. Test it. Build it.</div>
+        </div>
+        <button onclick="generatePDF()" id="download-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><polyline points="9 15 12 18 15 15"/></svg>
+            Save as PDF
+        </button>
+    </header>
+
+    <!-- TIP BOX -->
+    <div style="padding: 12px 2rem 0; position:relative; z-index:1;">
+        <div id="guide-box">
+            <span class="tip-icon">TIP</span>
+            <span><strong>Maker Rule:</strong> A rough canvas beats a blank page every time. Start with <strong>Problem</strong> and <strong>Customer</strong> — everything else follows.</span>
+        </div>
+    </div>
+
+    <!-- MAIN CANVAS GRID -->
+    <div class="canvas-wrap">
+        <div class="canvas-grid">
+
+            <!-- 1. PROBLEM -->
+            <div class="canvas-cell">
+                <span class="section-num">01</span>
+                <div class="cell-title">Problem</div>
+                <span class="cell-hint">What real pain do you solve?</span>
+                <textarea class="ta-main" placeholder="e.g., Generic gifts feel impersonal and take weeks to source"></textarea>
+                <div class="sub-section">
+                    <span class="sub-label">Existing Alternatives</span>
+                    <textarea class="ta-sub" placeholder="How is this solved today?"></textarea>
+                </div>
             </div>
-            <button onclick="generatePDF()" id="download-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-full transition-all flex items-center gap-2">
-                <i class="fas fa-file-pdf"></i> Save as PDF
-            </button>
-        </header>
 
-        <div id="guide-box" class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
-            <p class="text-sm text-blue-800">
-                <i class="fas fa-info-circle mr-2"></i>
-                <strong>Maker Tip:</strong> A rough canvas beats a blank page every time. Focus on your <strong>Problem</strong> and <strong>Customer</strong> first.
-            </p>
+            <!-- 4. SOLUTION + 8. KEY METRICS -->
+            <div class="canvas-cell split">
+                <div class="split-top">
+                    <span class="section-num">04</span>
+                    <div class="cell-title">Solution</div>
+                    <span class="cell-hint">Top 3 features</span>
+                    <textarea class="ta-half" placeholder="e.g., Custom laser-engraved signs made in-house"></textarea>
+                </div>
+                <div class="split-bot">
+                    <span class="section-num">08</span>
+                    <div class="cell-title">Key Metrics</div>
+                    <span class="cell-hint">Numbers that matter</span>
+                    <textarea class="ta-half" placeholder="e.g., Orders/week, repeat rate, avg. order value"></textarea>
+                </div>
+            </div>
+
+            <!-- 3. UNIQUE VALUE PROP -->
+            <div class="canvas-cell">
+                <span class="section-num">03</span>
+                <div class="cell-title">Unique Value Prop</div>
+                <span class="cell-hint">Why choose YOU?</span>
+                <textarea class="ta-main" placeholder="e.g., Personalized, laser-cut gifts delivered in 48 hrs"></textarea>
+                <div class="sub-section">
+                    <span class="sub-label">High-Level Concept</span>
+                    <textarea class="ta-sub" placeholder="Your X for Y analogy"></textarea>
+                </div>
+            </div>
+
+            <!-- 9. UNFAIR ADVANTAGE + 5. CHANNELS -->
+            <div class="canvas-cell split">
+                <div class="split-top">
+                    <span class="section-num">09</span>
+                    <div class="cell-title">Unfair Advantage</div>
+                    <span class="cell-hint">Can't be easily copied</span>
+                    <textarea class="ta-half" placeholder="e.g., CRI makerspace access, 5-yr trade relationships"></textarea>
+                </div>
+                <div class="split-bot">
+                    <span class="section-num">05</span>
+                    <div class="cell-title">Channels</div>
+                    <span class="cell-hint">How you reach them</span>
+                    <textarea class="ta-half" placeholder="e.g., Etsy, local markets, Instagram DMs"></textarea>
+                </div>
+            </div>
+
+            <!-- 2. CUSTOMER SEGMENTS -->
+            <div class="canvas-cell">
+                <span class="section-num">02</span>
+                <div class="cell-title">Customer Segments</div>
+                <span class="cell-hint">Be specific. Avoid "Everyone".</span>
+                <textarea class="ta-main" placeholder="e.g., GTA brides planning weddings on Etsy"></textarea>
+                <div class="sub-section">
+                    <span class="sub-label">Early Adopters</span>
+                    <textarea class="ta-sub" placeholder="Ideal customer characteristics"></textarea>
+                </div>
+            </div>
+
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-0 border-2 border-black bg-white">
-            
-            <div class="md:col-span-1 border-b md:border-b-0 md:border-r border-black p-4">
-                <h3 class="font-bold text-sm uppercase tracking-wider mb-2">1. Problem</h3>
-                <p class="text-[10px] text-gray-500 mb-2 italic uppercase">What real pain do you solve?</p>
-                <textarea class="w-full h-48 p-2 text-sm border border-gray-100 focus:bg-yellow-50 outline-none resize-none" placeholder="e.g., Generic gifts feel impersonal"></textarea>
-                <div class="mt-4 pt-4 border-t border-gray-100">
-                    <h4 class="font-bold text-[10px] uppercase text-gray-400">Existing Alternatives</h4>
-                    <textarea class="w-full h-24 p-2 text-sm border border-gray-50 resize-none" placeholder="How is this solved today?"></textarea>
-                </div>
+        <!-- COST + REVENUE ROW -->
+        <div class="bottom-grid">
+            <div class="bottom-cell">
+                <span class="section-num">07</span>
+                <div class="cell-title title-red">Cost Structure</div>
+                <span class="cell-hint">Materials · Labor · Fees · Overhead</span>
+                <textarea class="ta-half" placeholder="e.g., Wood: $4/unit · Labor: 45 min · Etsy fees: 6.5%"></textarea>
             </div>
-
-            <div class="md:col-span-1 border-b md:border-b-0 md:border-r border-black">
-                <div class="p-4 border-b border-black h-1/2">
-                    <h3 class="font-bold text-sm uppercase tracking-wider mb-2">4. Solution</h3>
-                    <textarea class="w-full h-32 p-2 text-sm border border-gray-100 focus:bg-yellow-50 outline-none resize-none" placeholder="e.g., Custom laser-engraved signs"></textarea>
-                </div>
-                <div class="p-4 h-1/2">
-                    <h3 class="font-bold text-sm uppercase tracking-wider mb-2">8. Key Metrics</h3>
-                    <textarea class="w-full h-32 p-2 text-sm border border-gray-100 focus:bg-yellow-50 outline-none resize-none" placeholder="e.g., Orders/wk, repeat rate"></textarea>
-                </div>
-            </div>
-
-            <div class="md:col-span-1 border-b md:border-b-0 md:border-r border-black p-4">
-                <h3 class="font-bold text-sm uppercase tracking-wider mb-2">3. Unique Value Prop</h3>
-                <p class="text-[10px] text-gray-500 mb-2 italic uppercase">Why choose YOU?</p>
-                <textarea class="w-full h-48 p-2 text-sm border border-gray-100 focus:bg-yellow-50 outline-none resize-none" placeholder="e.g., Personalized in 48 hrs"></textarea>
-                <div class="mt-4 pt-4 border-t border-gray-100">
-                    <h4 class="font-bold text-[10px] uppercase text-gray-400">High-Level Concept</h4>
-                    <textarea class="w-full h-24 p-2 text-sm border border-gray-50 resize-none" placeholder="Your X for Y analogy"></textarea>
-                </div>
-            </div>
-
-            <div class="md:col-span-1 border-b md:border-b-0 md:border-r border-black">
-                <div class="p-4 border-b border-black h-1/2">
-                    <h3 class="font-bold text-sm uppercase tracking-wider mb-2">9. Unfair Advantage</h3>
-                    <textarea class="w-full h-32 p-2 text-sm border border-gray-100 focus:bg-yellow-50 outline-none resize-none" placeholder="e.g., CRI maker space access"></textarea>
-                </div>
-                <div class="p-4 h-1/2">
-                    <h3 class="font-bold text-sm uppercase tracking-wider mb-2">5. Channels</h3>
-                    <textarea class="w-full h-32 p-2 text-sm border border-gray-100 focus:bg-yellow-50 outline-none resize-none" placeholder="e.g., Etsy, Local Markets"></textarea>
-                </div>
-            </div>
-
-            <div class="md:col-span-1 p-4">
-                <h3 class="font-bold text-sm uppercase tracking-wider mb-2">2. Customer Segments</h3>
-                <p class="text-[10px] text-gray-500 mb-2 italic uppercase">Be specific. Avoid 'Everyone'.</p>
-                <textarea class="w-full h-48 p-2 text-sm border border-gray-100 focus:bg-yellow-50 outline-none resize-none" placeholder="e.g., GTA Brides on Etsy"></textarea>
-                <div class="mt-4 pt-4 border-t border-gray-100">
-                    <h4 class="font-bold text-[10px] uppercase text-gray-400">Early Adopters</h4>
-                    <textarea class="w-full h-24 p-2 text-sm border border-gray-50 resize-none" placeholder="Ideal customer characteristics"></textarea>
-                </div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 border-2 border-t-0 border-black bg-white mb-8">
-            <div class="border-b md:border-b-0 md:border-r border-black p-4">
-                <h3 class="font-bold text-sm uppercase tracking-wider mb-2 text-red-600">7. Cost Structure</h3>
-                <p class="text-[10px] text-gray-500 mb-2 italic uppercase">Materials, Labor, Fees, Overhead.</p>
-                <textarea class="w-full h-32 p-2 text-sm border border-gray-100 outline-none resize-none" placeholder="e.g., Wood: $4/unit, Labor: 45m"></textarea>
-            </div>
-            <div class="p-4">
-                <h3 class="font-bold text-sm uppercase tracking-wider mb-2 text-green-600">6. Revenue Streams</h3>
-                <p class="text-[10px] text-gray-500 mb-2 italic uppercase">Retail, wholesale, bulk orders.</p>
-                <textarea class="w-full h-32 p-2 text-sm border border-gray-100 outline-none resize-none" placeholder="e.g., Retail: $35-65/unit"></textarea>
-            </div>
-        </div>
-
-        <div id="calc-section" class="bg-black text-white p-6 rounded-lg">
-            <h2 class="text-2xl font-black uppercase mb-4 tracking-tighter">The Viability Test: Cost &times; 3 Rule</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                    <label class="block text-xs uppercase font-bold mb-1 text-gray-400">All-In Cost Per Unit ($)</label>
-                    <input type="number" id="unitCost" class="w-full p-2 text-black font-bold outline-none" placeholder="e.g. 12" oninput="calculatePrice()">
-                </div>
-                <div class="flex items-center justify-center text-4xl font-black">&times; 3</div>
-                <div class="bg-gray-900 p-4 border border-gray-700">
-                    <label class="block text-xs uppercase font-bold mb-1 text-gray-400">Recommended Min. Retail</label>
-                    <div id="resultPrice" class="text-3xl font-black text-yellow-400">$0.00</div>
-                </div>
+            <div class="bottom-cell">
+                <span class="section-num">06</span>
+                <div class="cell-title title-green">Revenue Streams</div>
+                <span class="cell-hint">Retail · Wholesale · Bulk Orders</span>
+                <textarea class="ta-half" placeholder="e.g., Retail: $35–65/unit · Bulk 10+ units: 15% off"></textarea>
             </div>
         </div>
     </div>
 
-    <script>
-        function calculatePrice() {
-            const cost = document.getElementById('unitCost').value;
-            const result = document.getElementById('resultPrice');
-            if (cost > 0) {
-                result.innerText = '$' + (cost * 3).toFixed(2);
-            } else {
-                result.innerText = '$0.00';
-            }
-        }
+    <!-- VIABILITY CALCULATOR -->
+    <div class="calc-section">
+        <div class="calc-title">
+            Viability Test
+            <span>COST × 3 RULE</span>
+        </div>
+        <div class="calc-grid">
+            <div>
+                <span class="calc-label">All-In Cost Per Unit ($)</span>
+                <input type="number" id="unitCost" class="calc-input" placeholder="12.00" oninput="calculatePrice()">
+            </div>
+            <div class="calc-operator">× 3</div>
+            <div class="calc-result">
+                <span class="calc-label">Recommended Min. Retail Price</span>
+                <div id="resultPrice">$0.00</div>
+            </div>
+        </div>
+    </div>
 
-        function generatePDF() {
-            const element = document.getElementById('canvas-content');
-            const btn = document.getElementById('download-btn');
-            const guide = document.getElementById('guide-box');
-            
-            btn.style.display = 'none';
-            guide.style.display = 'none';
+    <!-- FOOTER -->
+    <div class="footer-note">
+        This project is for educational use. All linked external resources (YouTube, PDFs, tools) remain the property of their respective owners.
+    </div>
 
-            const opt = {
-                margin: 0.5,
-                filename: 'My_Maker_Lean_Canvas.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
-            };
+</div>
 
-            html2pdf().set(opt).from(element).save().then(() => {
-                btn.style.display = 'flex';
-                guide.style.display = 'block';
-            });
-        }
-    </script>
+<script>
+    function calculatePrice() {
+        const cost = parseFloat(document.getElementById('unitCost').value);
+        const result = document.getElementById('resultPrice');
+        result.textContent = cost > 0 ? '$' + (cost * 3).toFixed(2) : '$0.00';
+    }
+
+    function generatePDF() {
+        const element = document.getElementById('canvas-content');
+        const btn = document.getElementById('download-btn');
+        const guide = document.getElementById('guide-box').parentElement;
+
+        btn.style.display = 'none';
+        guide.style.display = 'none';
+
+        const opt = {
+            margin: 0.4,
+            filename: 'Maker_Lean_Canvas.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            btn.style.display = 'flex';
+            guide.style.display = 'block';
+        });
+    }
+</script>
+
 </body>
 </html>
