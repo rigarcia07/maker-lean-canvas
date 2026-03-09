@@ -2,9 +2,7 @@
 
 > The One-Page Business Plan for Makers
 
-A streamlined, interactive business planning tool designed for makers, artists, and small-batch manufacturers. Built for **Innovation Week** at the [Centre for Research and Innovation](https://www.centreforresearchandinnovation.com).
-
-🔗 **[Live Demo](https://yourusername.github.io/maker-lean-canvas)**
+A streamlined, interactive business planning tool designed for makers, artists, and small-batch manufacturers.
 
 ---
 
