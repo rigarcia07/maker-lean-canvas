@@ -4,6 +4,8 @@
 
 A streamlined, interactive business planning tool designed for makers, artists, and small-batch manufacturers.
 
+Live Demo: https://rigarcia07.github.io/maker-lean-canvas/
+
 ---
 
 ## Overview
